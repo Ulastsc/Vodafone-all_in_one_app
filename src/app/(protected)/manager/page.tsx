@@ -10,7 +10,7 @@ const VODARED = "#E60000";
  *  ========================= */
 export default function ManagerDashboard() {
   const [tab, setTab] = useState<
-    "overview" | "teams" | "performance" | "savings" | "risk" | "analytics"
+    "overview" | "teams" | "performance" | "risk" | "analytics"
   >("overview");
 
   const KPIS = [
@@ -61,7 +61,6 @@ export default function ManagerDashboard() {
           <TabButton active={tab === "overview"} onClick={() => setTab("overview")} label="Overview" />
           <TabButton active={tab === "teams"} onClick={() => setTab("teams")} label="Teams" />
           <TabButton active={tab === "performance"} onClick={() => setTab("performance")} label="Performance" />
-          <TabButton active={tab === "savings"} onClick={() => setTab("savings")} label="Savings" />
           <TabButton active={tab === "risk"} onClick={() => setTab("risk")} label="Risk Management" />
           <TabButton active={tab === "analytics"} onClick={() => setTab("analytics")} label="Analytics" />
         </div>
@@ -70,7 +69,7 @@ export default function ManagerDashboard() {
         {tab === "overview" && <OverviewSection />}
         {tab === "teams" && <TeamsSection />}
         {tab === "performance" && <PerformanceSection />}
-        {tab === "savings" && <SavingsSection />}
+       
         {tab === "risk" && <RiskSection />}
         {tab === "analytics" && <AnalyticsSection />}
       </main>
@@ -152,17 +151,17 @@ function TeamsSection() {
   const cards: Array<{
     name: string;
     members: number;
-    avg: string;      // "%91 avg"
-    avgTone: "good" | "ok"; // sağ üst mini rozet tonu
+    avg: string;    
+    avgTone: "good" | "ok"; 
     completed: number;
     inProgress: number;
     blocked: number;
-    savings: string;  // "€145K"
+     
   }> = [
-    { name: "UAM (User Access Management)", members: 3, avg: "87% avg",  avgTone: "ok",  completed: 32, inProgress: 8, blocked: 5, savings: "€145K" },
-    { name: "Audit and Compliance",         members: 3, avg: "91% avg",  avgTone: "good",completed: 28, inProgress: 6, blocked: 4, savings: "€89K"  },
-    { name: "Change Management",            members: 3, avg: "85% avg",  avgTone: "ok",  completed: 41, inProgress: 7, blocked: 4, savings: "€203K" },
-    { name: "Reporting and Analytics",      members: 3, avg: "88% avg",  avgTone: "ok",  completed: 26, inProgress: 5, blocked: 3, savings: "€78K"  },
+    { name: "UAM (User Access Management)", members: 3, avg: "87% avg",  avgTone: "ok",  completed: 32, inProgress: 8, blocked: 5 },
+    { name: "Audit and Compliance",         members: 3, avg: "91% avg",  avgTone: "good",completed: 28, inProgress: 6, blocked: 4  },
+    { name: "Change Management",            members: 3, avg: "85% avg",  avgTone: "ok",  completed: 41, inProgress: 7, blocked: 4 },
+    { name: "Reporting and Analytics",      members: 3, avg: "88% avg",  avgTone: "ok",  completed: 26, inProgress: 5, blocked: 3 },
   ];
 
   const filtered = selected === "all"
@@ -231,7 +230,7 @@ function TeamStatCard(props: {
   completed: number;
   inProgress: number;
   blocked: number;
-  savings: string;
+  
 }) {
   const badgeColor =
     props.avgTone === "good"
@@ -254,7 +253,7 @@ function TeamStatCard(props: {
         <MiniKPI label="Completed"  value={String(props.completed)} color="green" />
         <MiniKPI label="In Progress" value={String(props.inProgress)} color="blue" />
         <MiniKPI label="Blocked"    value={String(props.blocked)} color="red" />
-        <MiniKPI label="Savings"    value={props.savings}         color="purple" />
+                
       </div>
     </article>
   );
@@ -323,14 +322,7 @@ function PerformanceSection() {
   );
 }
 
-/** Savings (placeholder) */
-function SavingsSection() {
-  return (
-    <Card title="Cost Savings" subtitle="Quarterly savings and impact by initiatives">
-      <Placeholder>(waterfall / area + breakdown)</Placeholder>
-    </Card>
-  );
-}
+
 
 /** Risk (placeholder) */
 function RiskSection() {
