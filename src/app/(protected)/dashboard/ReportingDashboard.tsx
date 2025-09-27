@@ -1,325 +1,219 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-/* --------- demo veri (Ulaş & Kübra) --------- */
-type Member = {
-  name: "Ulas Tascioglu" | "Kubra Aydin";
-  title: string;
-  performance: number;
-  status: "Active" | "Busy";
-  initials: string;
+/** Vodafone kırmızısı */
+const VODA_RED = "#E60000";
+
+/* ----------------------------- Türler ----------------------------- */
+type TabKey = "tasks" | "requests" | "team" | "performance" | "sprints" | "analytics";
+
+type Tone =
+  | "yellow"
+  | "rose"
+  | "blue"
+  | "orange"
+  | "indigo"
+  | "emerald"
+  | "slate";
+
+type TagSpec = { text: string; tone: Tone; icon?: string };
+
+type SlaSpec = {
+  value: number; // 0..100
+  color: "amber" | "emerald" | "slate";
+  textRight?: string;
+  stateText?: string;
 };
 
-const MEMBERS: Member[] = [
-  { name: "Ulas Tascioglu", title: "Senior BI Analyst", performance: 93, status: "Active", initials: "UT" },
-  { name: "Kubra Aydin", title: "Data Analyst", performance: 100, status: "Busy", initials: "KA" },
-];
-
-type Task = {
-  id: string;
+type RequestCardSpec = {
   title: string;
-  status: "in progress" | "todo";
-  priority: "high" | "medium" | "low";
-  desc: string;
-  tags: string[];
+  code: string;
+  rightChip?: TagSpec;
+  tagsLeft: TagSpec[];
+  description: string;
+  assignee: string;
   due: string;
-  spent: string;
-  estimate: string;
-  subtasksDone: number;
-  subtasksTotal: number;
+  sla: SlaSpec;
 };
 
-const MY_TASKS: Task[] = [
-  {
-    id: "T-1",
-    title: "Monthly Revenue Report Automation",
-    status: "in progress",
-    priority: "high",
-    desc: "Automate the monthly revenue reporting process using Power BI",
-    tags: ["Power BI", "Automation", "Revenue"],
-    due: "2024-02-15",
-    spent: "18h",
-    estimate: "24h",
-    subtasksDone: 3,
-    subtasksTotal: 5,
-  },
-  {
-    id: "T-2",
-    title: "Data Quality Assessment",
-    status: "todo",
-    priority: "medium",
-    desc: "Assess and improve data quality across reporting systems",
-    tags: ["Data Quality", "Assessment", "SQL"],
-    due: "2024-02-20",
-    spent: "0h",
-    estimate: "12h",
-    subtasksDone: 0,
-    subtasksTotal: 3,
-  },
-];
+/* --------------------------- Yardımcı UI --------------------------- */
 
-export default function ReportingDashboard() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-
-  const [tab, setTab] = useState<"my" | "team" | "performance" | "sprints" | "analytics">("my");
-
-  useEffect(() => {
-    if (status === "unauthenticated") router.replace("/login");
-  }, [status, router]);
-
-  if (status !== "authenticated") {
-    return <div className="min-h-screen grid place-items-center text-sm text-gray-500">Loading…</div>;
-  }
-
-  const name = session?.user?.name ?? "User";
-
-  const KPIS = [
-    { label: "Tasks Completed", value: "0", sub: "This sprint", icon: "✅" },
-    { label: "In Progress", value: "1", sub: "Active work", icon: "🟢" },
-    { label: "Performance Score", value: "93%", sub: "↑ +2% this month", icon: "📈", accent: "text-emerald-600" },
-    { label: "Sprint Progress", value: "68%", sub: "Team sprint", icon: "🎯" },
-  ];
-
+function Tag({ text, tone, icon }: TagSpec) {
+  const map: Record<Tone, string> = {
+    yellow: "bg-amber-500/15 text-amber-300 ring-1 ring-amber-400/20",
+    rose: "bg-rose-500/15 text-rose-300 ring-1 ring-rose-400/20",
+    blue: "bg-blue-500/15 text-blue-300 ring-1 ring-blue-400/20",
+    orange: "bg-orange-500/15 text-orange-300 ring-1 ring-orange-400/20",
+    indigo: "bg-indigo-500/15 text-indigo-300 ring-1 ring-indigo-400/20",
+    emerald: "bg-emerald-500/15 text-emerald-300 ring-1 ring-emerald-400/20",
+    slate: "bg-white/10 text-white/70 ring-1 ring-white/10",
+  };
   return (
-    <div className="min-h-screen bg-[#f7f8fa] text-[#111827]">
-      {/* Header */}
-      <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200">
-        <div className="mx-auto max-w-[1200px] px-6 py-4 flex items-center gap-4">
-          <div className="h-12 w-12 rounded-full bg-gray-100 grid place-items-center text-lg">👤</div>
-          <div className="flex-1">
-            <div className="text-[18px] font-semibold leading-tight">{name}</div>
-            <div className="text-[12.5px] text-gray-600">Developer • Reporting and Development</div>
-            <div className="mt-1 text-xs text-gray-500 flex items-center gap-3">
-              <span>⭐ Performance: 93%</span>
-              <span className="opacity-50">•</span>
-              <span>🧩 2 Active Tasks</span>
-            </div>
-          </div>
-          <div className="hidden sm:flex items-center gap-2 text-xs text-gray-600">
-            <span className="rounded-full border px-2 py-1">🔗 Sprint RPT-2024.Q1.3</span>
-            <span className="rounded-full border px-2 py-1">📊 Sprint Progress: 68%</span>
-          </div>
+    <span
+      className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs ${map[tone]}`}
+    >
+      {icon && <span className="text-[11px]">{icon}</span>}
+      {text}
+    </span>
+  );
+}
+
+function SLAProgress({ value, color, textRight, stateText }: SlaSpec) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const bar =
+    color === "amber"
+      ? "bg-amber-400"
+      : color === "emerald"
+      ? "bg-emerald-400"
+      : "bg-white/20";
+  const rightColor =
+    color === "amber"
+      ? "text-amber-300"
+      : color === "emerald"
+      ? "text-emerald-300"
+      : "text-white/60";
+  return (
+    <>
+      <div className="mt-2 h-2 rounded-full bg-white/10 overflow-hidden">
+        <div className={`h-2 ${bar}`} style={{ width: `${clamped}%` }} />
+      </div>
+      <div className="mt-2 flex items-center justify-between text-xs">
+        <span className="text-white/60">SLA Progress</span>
+        <div className="flex items-center gap-3">
+          {textRight && <span className={rightColor}>{textRight}</span>}
+          {stateText && <span className="text-rose-300 font-medium">{stateText}</span>}
         </div>
-      </header>
+      </div>
+    </>
+  );
+}
 
-      <main className="mx-auto max-w-[1200px] px-6 py-8 space-y-8">
-        {/* KPI Grid */}
-        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {KPIS.map((k) => (
-            <article
-              key={k.label}
-              className="rounded-2xl bg-white p-5 shadow-sm hover:shadow-md transition-shadow border border-gray-100"
-            >
-              <div className="flex items-center justify-between">
-                <div className="text-[13px] text-gray-600">{k.label}</div>
-                <div className="grid h-9 w-9 place-items-center rounded-lg bg-gray-50">{k.icon}</div>
-              </div>
-              <div className={`mt-1 text-[28px] font-bold tracking-tight ${k.accent ?? ""}`}>{k.value}</div>
-              <div className="text-[12px] text-gray-500">{k.sub}</div>
-            </article>
-          ))}
-        </section>
-
-        {/* Tabs */}
-        <div className="flex items-center gap-2 border rounded-xl bg-white p-1 text-sm font-medium text-gray-600">
-          <TabButton active={tab === "my"} onClick={() => setTab("my")} label="My Tasks" />
-          <TabButton active={tab === "team"} onClick={() => setTab("team")} label="Team" />
-          <TabButton active={tab === "performance"} onClick={() => setTab("performance")} label="Performance" />
-          <TabButton active={tab === "sprints"} onClick={() => setTab("sprints")} label="Sprints" />
-          <TabButton active={tab === "analytics"} onClick={() => setTab("analytics")} label="Analytics" />
+function RequestCard(spec: RequestCardSpec) {
+  const { title, code, rightChip, tagsLeft, description, assignee, due, sla } = spec;
+  return (
+    <article className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur shadow-[0_1px_0_0_rgba(255,255,255,0.06)_inset] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-lg font-semibold">{title}</div>
+          <div className="text-xs text-white/60">{code}</div>
         </div>
+        {rightChip && <Tag {...rightChip} />}
+      </div>
 
-        {/* CONTENT */}
-        {tab === "my" && <MyTasks />}
-        {tab === "team" && <TeamSection />}
-        {tab === "performance" && <PerformanceSection />}
-        {tab === "sprints" && <SprintsSection />}
-        {tab === "analytics" && <AnalyticsSection />}
-      </main>
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {tagsLeft.map((t) => (
+          <Tag key={t.text} {...t} />
+        ))}
+      </div>
+
+      <p className="mt-4 text-sm text-white/80 leading-relaxed">{description}</p>
+
+      <div className="mt-4 grid grid-cols-2 gap-4 text-sm">
+        <div>
+          <div className="text-white/60">Atanan:</div>
+          <div className="font-medium">{assignee}</div>
+        </div>
+        <div>
+          <div className="text-white/60">Son Tarih:</div>
+          <div className="font-medium">📅 {due}</div>
+        </div>
+      </div>
+
+      <SLAProgress {...sla} />
+    </article>
+  );
+}
+
+function FilterChip({
+  label,
+  icon,
+  active,
+  onClick,
+}: {
+  label: string;
+  icon?: string;
+  active?: boolean;
+  onClick?: () => void;
+}) {
+  const base =
+    "inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm border transition";
+  const on = "bg-white/10 border-white/15 text-white shadow";
+  const off =
+    "bg-transparent border-white/10 text-white/80 hover:bg-white/8 hover:text-white";
+  return (
+    <button className={`${base} ${active ? on : off}`} onClick={onClick}>
+      {icon && <span>{icon}</span>}
+      <span>{label}</span>
+    </button>
+  );
+}
+
+function RightAlert() {
+  return (
+    <div className="rounded-xl bg-red-500/10 text-red-300 border border-red-400/20 px-4 py-3 flex items-center gap-3">
+      <span className="text-lg">📦</span>
+      <div className="font-semibold">Predictive AI Alert</div>
+      <div className="text-sm opacity-80">2 SR, SLA aşım riskinde</div>
+      <span className="ml-2">⚠️</span>
     </div>
   );
 }
 
-/* =================== Sections =================== */
-
-function MyTasks() {
-  const total = MY_TASKS.length;
-  const completed = 0;
-  const inProgress = MY_TASKS.filter((t) => t.status === "in progress").length;
-  const blocked = 0;
-
+function KpiCard({
+  title,
+  value,
+  sub,
+  tone,
+  icon,
+}: {
+  title: string;
+  value: string;
+  sub: string;
+  tone?: "green" | "blue" | "purple" | "orange";
+  icon?: string;
+}) {
+  const toneBg =
+    tone === "green"
+      ? "from-emerald-500/15 to-emerald-500/0"
+      : tone === "blue"
+      ? "from-blue-500/15 to-blue-500/0"
+      : tone === "purple"
+      ? "from-fuchsia-500/15 to-fuchsia-500/0"
+      : "from-orange-500/15 to-orange-500/0";
   return (
-    <section className="grid gap-6 lg:grid-cols-3">
-      {/* Left */}
-      <div className="lg:col-span-2 space-y-4">
-        <h2 className="font-semibold text-[15px]">My Tasks</h2>
-        <p className="text-sm text-gray-500">Manage your assigned tasks and track progress</p>
-
-        {MY_TASKS.map((t) => (
-          <TaskCard key={t.id} task={t} />
-        ))}
-      </div>
-
-      {/* Right */}
-      <div className="space-y-4">
-        <Card title="Task Summary">
-          <SummaryRow label="Total Tasks" value={total} />
-          <SummaryRow label="Completed" value={completed} color="green" />
-          <SummaryRow label="In Progress" value={inProgress} color="blue" />
-          <SummaryRow label="Blocked" value={blocked} color="red" />
-          <div className="mt-3 text-xs text-gray-500">Completion Rate</div>
-          <Progress value={(completed / Math.max(1, total)) * 100} />
-        </Card>
-
-        <Card title="Current Sprint">
-          <div className="text-xs text-gray-500">Sprint RPT-2024.Q1.3 (2024-01-29 – 2024-02-26)</div>
-          <div className="mt-2 text-xs text-gray-500">Progress</div>
-          <Progress value={68} />
-          <div className="mt-2 flex justify-between text-xs">
-            <span className="text-emerald-600">1 Completed</span>
-            <span className="text-blue-600">4 Remaining</span>
+    <article className="rounded-2xl border border-white/10 bg-white/5 p-5 relative overflow-hidden">
+      <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${toneBg}`} />
+      <div className="relative flex items-center justify-between">
+        <div className="text-white/70 text-sm">{title}</div>
+        {icon && (
+          <div className="grid h-9 w-9 place-items-center rounded-lg bg-white/7 text-white/80">
+            {icon}
           </div>
-        </Card>
-
-        <Card title="Quick Actions">
-          <GhostBtn>＋ Create New Task</GhostBtn>
-          <GhostBtn>📑 Generate Report</GhostBtn>
-          <GhostBtn>💬 Team Discussion</GhostBtn>
-        </Card>
+        )}
       </div>
-    </section>
+      <div className="relative mt-2 text-3xl font-extrabold tracking-tight">{value}</div>
+      <div className="relative text-xs text-white/60">{sub}</div>
+    </article>
   );
 }
 
-function TeamSection() {
-  return (
-    <section className="space-y-5">
-      <div>
-        <h3 className="text-[18px] font-semibold">Reporting and Analytics</h3>
-        <p className="text-sm text-gray-600">Business intelligence, reporting and data analytics</p>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {MEMBERS.map((m, idx) => (
-          <article key={m.name} className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-gray-100 grid place-items-center font-semibold">{m.initials}</div>
-              <div>
-                <div className="font-semibold">{m.name}</div>
-                <div className="text-xs text-gray-600">{m.title}</div>
-              </div>
-            </div>
-
-            <div className="mt-4 text-sm">Performance</div>
-            <Progress value={m.performance} />
-            <div className="mt-1 text-xs text-gray-500">Status</div>
-            <span
-              className={
-                "inline-block text-xs rounded-full px-2 py-0.5 " +
-                (m.status === "Active" ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700")
-              }
-            >
-              {m.status}
-            </span>
-
-            {idx === 0 && (
-              <div className="mt-3">
-                <div className="rounded-full bg-blue-50 text-blue-700 text-xs text-center py-1">You</div>
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function PerformanceSection() {
-  return (
-    <section className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card title="Performance Trend" subtitle="Your performance over the last 4 months">
-          <Placeholder>(trend line)</Placeholder>
-        </Card>
-        <Card title="Tasks Completed" subtitle="Monthly task completion and hours worked">
-          <Placeholder>(bar chart)</Placeholder>
-        </Card>
-      </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <Badge title="Data Wizard" desc="Achieved excellence in data analysis" />
-        <Badge title="Insight Generator" desc="Consistently delivers actionable insights" />
-        <Badge title="Goal Achiever" desc="Consistently meets sprint goals" />
-      </div>
-    </section>
-  );
-}
-
-function SprintsSection() {
-  const sprints = [
-    { title: "Sprint RPT-2024.Q1.3", date: "2024-01-29 - 2024-02-26", total: 5, done: 1, remain: 4, progress: 68, badge: "Active" },
-    { title: "Sprint RPT-2024.Q1.2", date: "2024-01-01 - 2024-01-28", total: 7, done: 7, remain: 0, progress: 100, badge: "Completed" },
-    { title: "Sprint RPT-2024.Q1.4", date: "2024-02-26 - 2024-03-25", total: 0, done: 0, remain: 0, progress: 0, badge: "Planned" },
-  ];
-
-  return (
-    <section className="space-y-4">
-      {sprints.map((s) => (
-        <article key={s.title} className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-semibold">{s.title}</div>
-              <div className="text-xs text-gray-500">{s.date}</div>
-            </div>
-            <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs">{s.badge}</span>
-          </div>
-          <div className="mt-3 grid gap-3 md:grid-cols-4 text-center">
-            <MiniKPI label="Total Tasks" value={String(s.total)} />
-            <MiniKPI label="Completed" value={String(s.done)} color="green" />
-            <MiniKPI label="Remaining" value={String(s.remain)} color="orange" />
-            <MiniKPI label="Progress" value={`${s.progress}%`} color="purple" />
-          </div>
-          <div className="mt-3">
-            <Progress value={s.progress} />
-          </div>
-        </article>
-      ))}
-    </section>
-  );
-}
-
-function AnalyticsSection() {
-  return (
-    <section className="grid gap-4 md:grid-cols-2">
-      <Card title="Work Hours Distribution" subtitle="Monthly work hours over the last 4 months">
-        <Placeholder>(hours line)</Placeholder>
-      </Card>
-
-      <Card title="Task Status Distribution" subtitle="Current status of all your tasks">
-        <div className="mt-2 text-sm space-y-2">
-          <Legend color="green" label="Completed" value="21" />
-          <Legend color="blue" label="In Progress" value="2" />
-          <Legend color="gray" label="To Do" value="1" />
-          <Legend color="red" label="Blocked" value="0" />
-        </div>
-      </Card>
-    </section>
-  );
-}
-
-/* =================== UI pieces =================== */
-
-function TabButton({ active, label, onClick }: { active: boolean; label: string; onClick(): void }) {
-  // Vodafone kırmızısı
+function TabButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
       className={
-        "px-4 py-2 rounded-lg transition " +
-        (active ? "bg-[#E60000] text-white shadow" : "hover:bg-gray-100 text-gray-700")
+        "px-4 py-2 rounded-lg text-sm font-medium transition " +
+        (active ? "bg-[#E60000] text-white shadow" : "hover:bg-white/10 text-white/80")
       }
     >
       {label}
@@ -327,135 +221,249 @@ function TabButton({ active, label, onClick }: { active: boolean; label: string;
   );
 }
 
-function TaskCard({ task }: { task: Task }) {
-  const statusChip = task.status === "in progress" ? "bg-blue-50 text-blue-700" : "bg-gray-100 text-gray-700";
-  const prioChip =
-    task.priority === "high" ? "bg-orange-50 text-orange-700" :
-    task.priority === "medium" ? "bg-yellow-50 text-yellow-700" : "bg-emerald-50 text-emerald-700";
+/* -------------------------- Requests Section -------------------------- */
 
-  const progress = (task.subtasksDone / Math.max(1, task.subtasksTotal)) * 100;
+function RequestsSection() {
+  const cards: RequestCardSpec[] = [
+    {
+      title: "Agent performans optimizasyonu gerekiyor",
+      code: "#SR-2024-001",
+      rightChip: { text: "Monitoring", tone: "yellow", icon: "🛠" },
+      tagsLeft: [
+        { text: "In Progress", tone: "yellow", icon: "⚡" },
+        { text: "Critical", tone: "rose" },
+        { text: "Performance", tone: "blue" },
+      ],
+      description:
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.",
+      assignee: "Ulaş Taşçıoğlu",
+      due: "08.12.2024",
+      sla: { value: 78, color: "amber", textRight: "38h / 48h", stateText: "Delay" },
+    },
+    {
+      title: "Yeni chatbot entegrasyonu talebi",
+      code: "#SR-2024-002",
+      tagsLeft: [
+        { text: "Open", tone: "blue" },
+        { text: "High", tone: "orange" },
+        { text: "Integration", tone: "indigo" },
+      ],
+      description:
+        "Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Mauris viverra veniam sit amet lacus cursus de turpis egestas.",
+      assignee: "Kübra Aydın",
+      due: "09.12.2024",
+      sla: { value: 65, color: "emerald", textRight: "18h / 96h" },
+    },
+  ];
 
   return (
-    <article className="rounded-2xl bg-white border border-gray-100 p-5 shadow-sm hover:shadow-md">
-      <div className="flex justify-between gap-4">
-        <div>
-          <h3 className="font-medium text-[14px]">{task.title}</h3>
-          <p className="text-sm text-gray-500">{task.desc}</p>
-        </div>
+    <section className="space-y-4">
+      <div>
+        <div className="text-2xl font-semibold">Service Request Tracking</div>
+        <div className="text-sm text-white/60">Ekip 2 ekibine açılan servis talepleri</div>
+      </div>
+
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="flex items-center gap-2">
-          <span className={`text-xs rounded-full px-2 py-1 ${statusChip}`}>{task.status}</span>
-          <span className={`text-xs rounded-full px-2 py-1 ${prioChip}`}>{task.priority}</span>
+          <FilterChip active icon="⚠️" label="Tüm Talepler" />
+          <FilterChip icon="🛡️" label="Riskli Talepler (2)" />
+          <FilterChip icon="👤" label="Benim Taleplerim" />
+        </div>
+        <div className="lg:ml-auto">
+          <RightAlert />
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mt-2">
-        {task.tags.map((tag) => (
-          <span key={tag} className="text-xs border rounded-md px-2 py-0.5 bg-gray-50">
-            {tag}
-          </span>
+      <div className="grid gap-4 md:grid-cols-2">
+        {cards.map((c) => (
+          <RequestCard key={c.code} {...c} />
         ))}
       </div>
 
-      <div className="mt-3 h-2 rounded-full bg-gray-100 overflow-hidden">
-        <div className="h-2 rounded-full bg-[#111827]" style={{ width: `${progress}%` }} />
+      <div className="grid gap-4">
+        <RequestCard
+          title="API response time iyileştirmesi"
+          code="#SR-2024-003"
+          tagsLeft={[
+            { text: "Backlog", tone: "slate" },
+            { text: "Performance", tone: "blue" },
+          ]}
+          description="Backlog’daki performans optimizasyonları için izleme ve iyileştirme planı."
+          assignee="Ulaş Taşçıoğlu"
+          due="15.12.2024"
+          sla={{ value: 0, color: "slate" }}
+        />
       </div>
-    </article>
+    </section>
   );
 }
 
-function Card({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
+/* -------------------------- Ana Dashboard --------------------------- */
+
+export default function ReportingDashboard() {
+  const { data: session } = useSession();
+  const name = session?.user?.name ?? "User";
+
+  const [tab, setTab] = useState<TabKey>("tasks");
+
+  // İlk açılışta "Tasks" sekmesini göster.
+  useEffect(() => {
+    setTab("tasks");
+  }, []);
+
   return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
-      <div className="font-semibold">{title}</div>
-      {subtitle && <div className="text-xs text-gray-500">{subtitle}</div>}
-      <div className="mt-3">{children}</div>
+    <div className="min-h-screen text-white bg-[#0b0d12]">
+      {/* HEADER (gradient çubuk) */}
+      <header className="sticky top-0 z-10 border-b border-white/10 bg-[radial-gradient(1200px_600px_at_10%_-20%,rgba(0,200,255,.15),transparent),radial-gradient(1200px_600px_at_90%_-20%,rgba(230,0,0,.18),transparent)]">
+        <div className="mx-auto max-w-[1200px] px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-full bg-green-600 grid place-items-center font-bold">
+              {name.split(" ").map((s) => s[0]).join("").slice(0, 2)}
+            </div>
+            <div>
+              <div className="text-xl font-semibold">{name}</div>
+              <div className="text-sm text-white/60">Team Member – Reporting and Development</div>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center gap-2">
+            <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs">
+              🔗 Sprint RPT-2024.Q1.3
+            </span>
+            <span className="rounded-full border border-white/15 bg-white/5 px-2 py-1 text-xs">
+              📊 Sprint Progress: 68%
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[1200px] px-6 py-8 space-y-8">
+        {/* KPI’lar */}
+        <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <KpiCard title="Tasks Completed" value="0" sub="This sprint" tone="green" icon="✅" />
+          <KpiCard title="In Progress" value="0" sub="Active work" tone="blue" icon="🟢" />
+          <KpiCard title="Performance Score" value="93%" sub="↑ +2% this month" tone="purple" icon="📈" />
+          <KpiCard title="Sprint Progress" value="68%" sub="Team sprint" tone="orange" icon="🎯" />
+        </section>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-2 border border-white/10 rounded-xl bg-white/5 p-1 text-sm font-medium">
+          <TabButton active={tab === "tasks"} onClick={() => setTab("tasks")} label="Tasks" />
+          <TabButton
+            active={tab === "requests"}
+            onClick={() => setTab("requests")}
+            label="Service Requests"
+          />
+          <TabButton active={tab === "team"} onClick={() => setTab("team")} label="Team" />
+          <TabButton
+            active={tab === "performance"}
+            onClick={() => setTab("performance")}
+            label="Performance"
+          />
+          <TabButton active={tab === "sprints"} onClick={() => setTab("sprints")} label="Sprints" />
+          <TabButton
+            active={tab === "analytics"}
+            onClick={() => setTab("analytics")}
+            label="Analytics"
+          />
+        </div>
+
+        {/* İki kolonlu ana gövde */}
+        <section className="grid gap-6 lg:grid-cols-3">
+          {/* Sol (2 kolon) */}
+          <div className="lg:col-span-2">
+            {tab === "requests" ? (
+              <RequestsSection />
+            ) : tab === "tasks" ? (
+              <>
+                <div className="text-xl font-semibold mb-2">My Tasks</div>
+                <div className="text-sm text-white/60 mb-4">
+                  Manage your assigned tasks and track progress
+                </div>
+                <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 text-white/50">
+                  No tasks yet.
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 text-white/70">
+                <div className="text-sm">
+                  {tab === "team" && "Team view (placeholder)"}
+                  {tab === "performance" && "Performance view (placeholder)"}
+                  {tab === "sprints" && "Sprints view (placeholder)"}
+                  {tab === "analytics" && "Analytics view (placeholder)"}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Sağ (1 kolon) */}
+          <div className="space-y-4">
+            {/* Task Summary */}
+            <article className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
+              <div className="font-semibold mb-2">Task Summary</div>
+              <ul className="text-sm space-y-1">
+                <li className="flex justify-between">
+                  <span className="text-white/60">Total Tasks</span>
+                  <span>0</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-white/60">Completed</span>
+                  <span className="text-emerald-300">0</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-white/60">In Progress</span>
+                  <span className="text-blue-300">0</span>
+                </li>
+                <li className="flex justify-between">
+                  <span className="text-white/60">Blocked</span>
+                  <span className="text-rose-300">0</span>
+                </li>
+              </ul>
+            </article>
+
+            {/* Current Sprint */}
+            <article className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
+              <div className="font-semibold mb-1">Current Sprint</div>
+              <div className="text-xs text-white/60">Sprint RPT-2024.Q1.3</div>
+              <div className="text-xs text-white/60">2024-01-29 – 2024-02-26</div>
+              <div className="mt-3">
+                <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+                  <div className="h-2 bg-white/40" style={{ width: "68%" }} />
+                </div>
+              </div>
+              <div className="mt-3 grid grid-cols-2 gap-2 text-center">
+                <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 py-2">
+                  <div className="text-lg font-bold text-emerald-300">1</div>
+                  <div className="text-xs text-white/70">Completed</div>
+                </div>
+                <div className="rounded-xl border border-blue-400/20 bg-blue-500/10 py-2">
+                  <div className="text-lg font-bold text-blue-300">4</div>
+                  <div className="text-xs text-white/70">Remaining</div>
+                </div>
+              </div>
+            </article>
+
+            {/* Quick Actions */}
+            <article className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-5">
+              <div className="font-semibold mb-3">Quick Actions</div>
+              <div className="space-y-2">
+                <GhostAction>⚡ Create New Task</GhostAction>
+                <GhostAction>📄 Generate Report</GhostAction>
+                <GhostAction>💬 Team Discussion</GhostAction>
+                <GhostAction>⚙️ Settings</GhostAction>
+              </div>
+            </article>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }
 
-function Progress({ value }: { value: number }) {
-  const v = Math.min(100, Math.max(0, value));
+function GhostAction({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-3 rounded-full bg-gray-200 overflow-hidden">
-      <div className="h-3 rounded-full bg-[#111827]" style={{ width: `${v}%` }} />
-    </div>
-  );
-}
-
-function SummaryRow({ label, value, color }: { label: string; value: number; color?: "green" | "blue" | "red" }) {
-  const cls =
-    color === "green" ? "text-emerald-600" :
-    color === "blue" ? "text-blue-600" :
-    color === "red" ? "text-rose-600" : "text-gray-900";
-  return (
-    <div className="flex items-center justify-between py-1 text-sm">
-      <span className="text-gray-600">{label}</span>
-      <span className={`font-semibold ${cls}`}>{value}</span>
-    </div>
-  );
-}
-
-function MiniKPI({ label, value, color }: { label: string; value: string; color?: "green" | "orange" | "purple" }) {
-  const colorCls =
-    color === "green" ? "text-emerald-600" :
-    color === "orange" ? "text-orange-600" :
-    color === "purple" ? "text-purple-600" : "text-blue-600";
-  return (
-    <div className="py-2 rounded-xl border border-gray-100 bg-white shadow-sm">
-      <div className={`text-2xl font-bold ${colorCls}`}>{value}</div>
-      <div className="text-xs text-gray-500">{label}</div>
-    </div>
-  );
-}
-
-function Badge({ title, desc }: { title: string; desc: string }) {
-  return (
-    <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
-      <div className="flex items-center gap-2">
-        <span>🏅</span>
-        <div className="font-medium">{title}</div>
-      </div>
-      <div className="mt-1 text-sm text-gray-600">{desc}</div>
-    </div>
-  );
-}
-
-function Legend({ color, label, value }: { color: "green" | "blue" | "gray" | "red"; label: string; value: string }) {
-  const dot =
-    color === "green" ? "bg-emerald-500" :
-    color === "blue" ? "bg-blue-500" :
-    color === "red" ? "bg-rose-500" : "bg-gray-500";
-  return (
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-sm">
-        <span className={`h-2.5 w-2.5 rounded-full ${dot}`} />
-        <span>{label}</span>
-      </div>
-      <span className="font-medium">{value}</span>
-    </div>
-  );
-}
-
-function GhostBtn({ children }: { children: React.ReactNode }) {
-  return (
-    <button className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-left text-sm text-gray-600 hover:bg-gray-50">
+    <button className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-sm text-white/80 hover:bg-white/10">
       {children}
     </button>
-  );
-}
-
-function Placeholder({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="h-48 rounded-xl border border-dashed bg-gradient-to-b from-gray-50 to-white grid place-items-center text-gray-500 text-sm">
-      {children}
-    </div>
   );
 }

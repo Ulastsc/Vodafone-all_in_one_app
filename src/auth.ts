@@ -1,10 +1,9 @@
-import NextAuth, { type NextAuthOptions } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
+import { prisma } from "@/lib/prisma";
 
-const TEAMS = ["UAM","Audit and Change","Reporting"] as const;
-
+const TEAMS = ["UAM", "Audit and Change", "Reporting"] as const;
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
@@ -13,60 +12,86 @@ const loginSchema = z.object({
 
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
+  pages: {
+    signIn: "/login",
+    error: "/login",    // hata yine /login’de görünsün
+  },
+  debug: process.env.NODE_ENV === "development",
   providers: [
     Credentials({
       name: "Vodafone Login",
       credentials: { email: {}, password: {}, team: {} },
       async authorize(creds) {
+        // 1) Form doğrulama
         const parsed = loginSchema.safeParse(creds);
-        if (!parsed.success) throw new Error("Geçersiz form verisi.");
-
+        if (!parsed.success) {
+          console.error("AUTHZ Zod error:", parsed.error.flatten());
+          return null;
+        }
         const { email, password, team } = parsed.data;
 
-        // PoC: sabit parola (SSO gelene kadar)
-        if (password !== "Vodafone!123") throw new Error("E-posta/şifre hatalı.");
+        // 2) PoC parola kontrolü (SSO gelene kadar)
+        if (password !== "Vodafone!123") {
+          console.warn("AUTHZ wrong password", email);
+          return null; // CredentialsSignin hatası üretir
+        }
 
+        // 3) Kullanıcıyı bul
         const user = await prisma.user.findUnique({
           where: { email },
           include: { memberships: { include: { team: true } } },
         });
-        if (!user) throw new Error("Kullanıcı bulunamadı.");
+        if (!user) {
+          console.warn("AUTHZ user not found", email);
+          return null;
+        }
 
+        // 4) Whitelist
         const allowed = [
           "ahmet.koylu@vodafone.com",
           "kubra.aydin@vodafone.com",
           "ulas.tascioglu@vodafone.com",
         ];
-        if (!allowed.includes(email)) throw new Error("OpEx dışı erişim yasak.");
+        if (!allowed.includes(email)) {
+          console.warn("AUTHZ not in allowed list", email);
+          return null;
+        }
 
-        const hasTeam = user.memberships.some(m => m.team.name === team);
-        if (!hasTeam) throw new Error("Bu takıma erişim yetkiniz yok.");
+        // 5) Team membership
+        const hasTeam = user.memberships.some((m) => m.team.name === team);
+        if (!hasTeam) {
+          console.warn("AUTHZ no team membership", { email, team });
+          return null;
+        }
 
+        // 6) Başarılı
         return {
           id: String(user.id),
-          name: user.name,
+          name: user.name ?? email.split("@")[0],
           email: user.email,
-          role: (user.role as "manager"|"user") ?? "user",
+          role: (user.role as "manager" | "user") ?? "user",
           team,
-        } as any;
+        };
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
-        token.role = (user as any).role;
-        token.team = (user as any).team;
+        token.role = user.role;
+        token.team = user.team;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.role = token.role as any;
-        session.user.team = token.team as any;
+        session.user.role = (token.role ?? "user") as "manager" | "user";
+        session.user.team = (token.team ?? "UAM") as
+          | "UAM"
+          | "Audit and Change"
+          | "Reporting";
       }
       return session;
     },
   },
-  pages: { signIn: "/login" },
 };
