@@ -1,43 +1,40 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/auth";
+// src/app/api/jira/create/route.ts
+import { NextResponse } from "next/server";
 import { jiraCreateIssue } from "@/lib/jira";
 
-function projectKeyForTeam(team: string) {
-  switch (team) {
-    case "Reporting":        return process.env.JIRA_PROJECT_REPORTING || "SCRUM";
-    case "UAM":              return process.env.JIRA_PROJECT_UAM || "UAM";
-    case "Audit and Change": return process.env.JIRA_PROJECT_AUDIT_CHANGE || "AUDIT";
-    default:                 return process.env.JIRA_PROJECT_REPORTING || "SCRUM";
-  }
-}
+type CreateBody = {
+  summary: string;
+  description?: string;
+  issueType?: "Task" | "Bug" | "Story";
+  priority?: "Highest" | "High" | "Medium" | "Low" | "Lowest";
+  labels?: string[];
+};
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+    const body = (await req.json()) as CreateBody;
 
-    const { summary, description, issueType, priority, assigneeEmail, labels } = await req.json();
-
-    if (!summary || typeof summary !== "string") {
-      return NextResponse.json({ error: "summary_required" }, { status: 400 });
+    if (!body.summary || body.summary.trim().length === 0) {
+      return NextResponse.json({ ok: false, error: "Summary is required" }, { status: 400 });
     }
 
-    const team = (session.user as any)?.team ?? "Reporting";
-    const projectKey = projectKeyForTeam(team);
+    const projectKey =
+      process.env.JIRA_PROJECT_KEY && process.env.JIRA_PROJECT_KEY.trim().length > 0
+        ? process.env.JIRA_PROJECT_KEY.trim()
+        : "OPEX";
 
-    const created = await jiraCreateIssue({
+    const issue = await jiraCreateIssue({
       projectKey,
-      summary,
-      description,
-      issueType,
-      priorityName: priority,
-      assigneeEmail,
-      labels,
+      summary: body.summary,
+      description: body.description ?? "",
+      issueType: body.issueType ?? "Task",
+      priority: body.priority ?? "Medium",
+      labels: body.labels ?? [],
     });
 
-    return NextResponse.json({ ok: true, ...created });
-  } catch (e: any) {
-    return NextResponse.json({ ok: false, error: e?.message ?? "unknown" }, { status: 200 });
+    return NextResponse.json({ ok: true, key: issue.key, id: issue.id });
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Unknown error";
+    return NextResponse.json({ ok: false, error: msg }, { status: 500 });
   }
 }
