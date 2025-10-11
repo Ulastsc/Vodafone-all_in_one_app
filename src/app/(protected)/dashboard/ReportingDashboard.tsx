@@ -3,7 +3,7 @@
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
 
-/** Vodafone kırmızısı */
+/** Vodafone kırmızısı (şu an sadece tab aktif rengi için saklı) */
 const VODA_RED = "#E60000";
 
 /* ----------------------------- Türler ----------------------------- */
@@ -298,6 +298,181 @@ function RequestsSection() {
   );
 }
 
+/* ----------------------------- Team Section ----------------------------- */
+
+type Member = {
+  initials: string;
+  name: string;
+  title: string;
+  performance: number; // %
+  status: "Active" | "Busy";
+  isYou?: boolean;
+};
+
+const TEAM_MEMBERS: Member[] = [
+  {
+    initials: "UT",
+    name: "Ulaş Taşcıoğlu",
+    title: "DevOps Service Engineer",
+    performance: 90,
+    status: "Busy",
+    isYou: true,
+  },
+  {
+    initials: "KA",
+    name: "Kübra Aydın",
+    title: "DevOps Service Engineer",
+    performance: 90,
+    status: "Busy",
+  },
+  {
+    initials: "PT",
+    name: "Peren Taşkıran",
+    title: "DevOps Service Engineer",
+    performance: 90,
+    status: "Active",
+  },
+  {
+    initials: "SU",
+    name: "Sude Uzun",
+    title: "DevOps Service Engineer",
+    performance: 90,
+    status: "Active",
+  },
+  {
+    initials: "YEE",
+    name: "Yunus Emre Ekici",
+    title: "DevOps Service Engineer",
+    performance: 90,
+    status: "Active",
+  },
+];
+
+function TeamView() {
+  return (
+    <section className="space-y-6">
+      {/* Başlık */}
+      <div>
+        <h2 className="text-[22px] md:text-[24px] font-semibold text-white">
+          Reporting and Analytics
+        </h2>
+        <p className="text-sm text-white/60 mt-1">
+          Business intelligence, reporting and data analytics
+        </p>
+      </div>
+
+      {/* Üyeler kartları */}
+      <div className="grid gap-5 md:grid-cols-2">
+        {TEAM_MEMBERS.map((m) => (
+          <MemberCard key={m.name} {...m} />
+        ))}
+      </div>
+
+      {/* Team Sprint Overview */}
+      <TeamSprintOverview />
+    </section>
+  );
+}
+
+function MemberCard({ initials, name, title, performance, status, isYou }: Member) {
+  const statusChip =
+    status === "Active"
+      ? "bg-emerald-100/10 text-emerald-300 border border-emerald-400/20"
+      : "bg-amber-100/10 text-amber-300 border border-amber-400/20";
+
+  return (
+    <article className="rounded-2xl border border-white/10 bg-[#111827]/70 backdrop-blur p-5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)]">
+      <div className="flex items-start gap-4">
+        {/* Avatar */}
+        <div className="relative">
+          <div className="h-16 w-16 rounded-full grid place-items-center text-white font-semibold bg-gradient-to-br from-emerald-500 to-green-600">
+            {initials}
+          </div>
+          <span
+            className={`absolute -right-1 -bottom-1 h-3 w-3 rounded-full ring-2 ring-[#111827] ${
+              status === "Active" ? "bg-emerald-400" : "bg-amber-400"
+            }`}
+          />
+        </div>
+
+        {/* İçerik */}
+        <div className="flex-1">
+          <div className="text-white font-semibold text-[15px]">{name}</div>
+          <div className="text-[12px] text-white/60">{title}</div>
+
+          <div className="mt-4 text-sm text-white/70">Performance</div>
+          <div className="mt-1 flex items-center gap-3">
+            <ProgressBar value={performance} />
+            <span className="text-white font-semibold">{performance}%</span>
+          </div>
+
+          <div className="mt-3">
+            <span className={`text-xs px-3 py-1 rounded-lg ${statusChip}`}>{status}</span>
+          </div>
+
+          {isYou && (
+            <div className="mt-4">
+              <div className="rounded-full bg-emerald-600/20 border border-emerald-400/30 text-emerald-200 text-center text-sm py-2">
+                You
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function ProgressBar({ value }: { value: number }) {
+  const v = Math.max(0, Math.min(100, value));
+  return (
+    <div className="h-2.5 w-full max-w-[340px] rounded-full bg-white/10 overflow-hidden">
+      <div
+        className="h-2.5 rounded-full bg-gradient-to-r from-violet-500 to-fuchsia-500"
+        style={{ width: `${v}%` }}
+      />
+    </div>
+  );
+}
+
+function TeamSprintOverview() {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-[#0b1322]/80 backdrop-blur p-5">
+      <div className="flex items-center gap-2 text-white/80">
+        <span className="text-emerald-400">▦</span>
+        <div className="font-medium">Team Sprint Overview</div>
+      </div>
+      <p className="text-sm text-white/60 mt-1">
+        Current sprint progress and statistics
+      </p>
+
+      <div className="mt-5 grid gap-4 md:grid-cols-4">
+        <StatTile color="from-[#0ea5e9]/20 to-[#38bdf8]/10" number="5" label="Total Tasks" />
+        <StatTile color="from-[#10b981]/20 to-[#34d399]/10" number="1" label="Completed" />
+        <StatTile color="from-[#f59e0b]/20 to-[#fbbf24]/10" number="4" label="Remaining" />
+        <StatTile color="from-[#8b5cf6]/20 to-[#a78bfa]/10" number="68%" label="Progress" />
+      </div>
+    </div>
+  );
+}
+
+function StatTile({
+  number,
+  label,
+  color,
+}: {
+  number: string;
+  label: string;
+  color: string;
+}) {
+  return (
+    <div className={`rounded-2xl border border-white/10 bg-gradient-to-br ${color} p-6`}>
+      <div className="text-4xl font-bold text-white">{number}</div>
+      <div className="mt-1 text-sm text-white/70">{label}</div>
+    </div>
+  );
+}
+
 /* -------------------------- Ana Dashboard --------------------------- */
 
 export default function ReportingDashboard() {
@@ -306,7 +481,6 @@ export default function ReportingDashboard() {
 
   const [tab, setTab] = useState<TabKey>("tasks");
 
-  // İlk açılışta "Tasks" sekmesini göster.
   useEffect(() => {
     setTab("tasks");
   }, []);
@@ -322,7 +496,9 @@ export default function ReportingDashboard() {
             </div>
             <div>
               <div className="text-xl font-semibold">{name}</div>
-              <div className="text-sm text-white/60">Team Member – Reporting and Development</div>
+              <div className="text-sm text-white/60">
+                Team Member – Reporting and Development
+              </div>
             </div>
           </div>
 
@@ -384,10 +560,11 @@ export default function ReportingDashboard() {
                   No tasks yet.
                 </div>
               </>
+            ) : tab === "team" ? (
+              <TeamView />
             ) : (
               <div className="rounded-2xl border border-white/10 bg-white/5 backdrop-blur p-6 text-white/70">
                 <div className="text-sm">
-                  {tab === "team" && "Team view (placeholder)"}
                   {tab === "performance" && "Performance view (placeholder)"}
                   {tab === "sprints" && "Sprints view (placeholder)"}
                   {tab === "analytics" && "Analytics view (placeholder)"}

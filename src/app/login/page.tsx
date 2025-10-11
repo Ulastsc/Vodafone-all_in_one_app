@@ -114,12 +114,6 @@ export default function LoginPage() {
                 <div className="font-semibold">Available Teams</div>
                 <div className="text-white/60 text-sm">⏺</div>
               </div>
-              <div className="mt-3 flex flex-wrap gap-3">
-                <TeamChip label="OpEx" active />
-                <TeamChip label="Ekip 2" />
-                <TeamChip label="Ekip 3" />
-                <TeamChip label="Ekip 4" />
-              </div>
 
               <div className="mt-5 rounded-xl bg-blue-400/10 border border-blue-300/20 p-4 text-[13px]">
                 <div className="font-medium">🔐 Test Login Credentials</div>
@@ -135,6 +129,10 @@ export default function LoginPage() {
                   <div>
                     <span className="font-medium">Admin:</span>{" "}
                     Diğer kullanıcılar + OpEx team → <b>Admin Dashboard</b>
+                  </div>
+                  <div>
+                    <span className="font-medium">testpassword:</span>{" "}
+                    Tüm test hesapları için şifre → <b>Vodafone!123</b>
                   </div>
                 </div>
               </div>
