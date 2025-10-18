@@ -122,7 +122,7 @@ function OverviewSection() {
         />
         
         <TeamCard
-          name="Reporting and Analytics"
+          name="Reporting and Development"
           members={3}
           perf={88}
           sprint={88}
@@ -144,7 +144,7 @@ function TeamsSection() {
     { key: "uam",  name: "UAM (User Access Management)", color: "blue"  as const },
     { key: "audit",name: "Audit and Compliance",          color: "rose"  as const },
     { key: "change",name: "Change Management",            color: "purple"as const },
-    { key: "report",name:"Reporting and Analytics",       color: "green" as const },
+    { key: "report",name:"Reporting and Development",       color: "green" as const },
   ];
   const [selected, setSelected] = useState("all");
 
@@ -161,7 +161,7 @@ function TeamsSection() {
     { name: "UAM (User Access Management)", members: 3, avg: "87% avg",  avgTone: "ok",  completed: 32, inProgress: 8, blocked: 5 },
     { name: "Audit and Compliance",         members: 3, avg: "91% avg",  avgTone: "good",completed: 28, inProgress: 6, blocked: 4  },
     { name: "Change Management",            members: 3, avg: "85% avg",  avgTone: "ok",  completed: 41, inProgress: 7, blocked: 4 },
-    { name: "Reporting and Analytics",      members: 3, avg: "88% avg",  avgTone: "ok",  completed: 26, inProgress: 5, blocked: 3 },
+    { name: "Reporting and Development",      members: 3, avg: "88% avg",  avgTone: "ok",  completed: 26, inProgress: 5, blocked: 3 },
   ];
 
   const filtered = selected === "all"

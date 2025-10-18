@@ -354,10 +354,10 @@ function TeamView() {
       {/* Başlık */}
       <div>
         <h2 className="text-[22px] md:text-[24px] font-semibold text-white">
-          Reporting and Analytics
+          Reporting and Development
         </h2>
         <p className="text-sm text-white/60 mt-1">
-          Business intelligence, reporting and data analytics
+          Business intelligence, reporting and development
         </p>
       </div>
 

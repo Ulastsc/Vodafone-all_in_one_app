@@ -1,25 +1,20 @@
-import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
-
-type Team = "UAM" | "Audit and Change" | "Reporting";
-type Role = "manager" | "user";
+// src/types/next-auth.d.ts
+import NextAuth from "next-auth";
 
 declare module "next-auth" {
-  interface User extends DefaultUser {
-    role: Role;
-    team: Team;
-  }
-
-  interface Session extends DefaultSession {
-    user: DefaultSession["user"] & {
-      role: Role;
-      team: Team;
+  interface Session {
+    user: {
+      id?: string;
+      name?: string | null;
+      email?: string | null;
+      image?: string | null;
+      role?: "manager" | "user";
     };
   }
 }
 
 declare module "next-auth/jwt" {
   interface JWT {
-    role?: Role;
-    team?: Team;
+    role?: "manager" | "user";
   }
 }
