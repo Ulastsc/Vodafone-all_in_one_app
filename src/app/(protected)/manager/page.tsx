@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 /** Vodafone kırmızısı */
 const VODARED = "#E60000";
@@ -9,6 +10,7 @@ const VODARED = "#E60000";
  *  Manager Dashboard (Ahmet)
  *  ========================= */
 export default function ManagerDashboard() {
+  const router = useRouter();
   const [tab, setTab] = useState<
     "overview" | "teams" | "performance" | "risk" | "analytics"
   >("overview");
@@ -24,7 +26,7 @@ export default function ManagerDashboard() {
       {/* Header */}
       <header className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-gray-200">
         <div className="mx-auto max-w-[1200px] px-6 py-4 flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-violet-100 grid place-items-center"></div>
+          <div className="h-10 w-10 rounded-xl bg-violet-100 grid place-items-center" />
           <div className="flex-1">
             <div className="text-[18px] font-semibold leading-tight">Manager Dashboard</div>
             <div className="text-[12.5px] text-gray-600">
@@ -61,6 +63,13 @@ export default function ManagerDashboard() {
           <TabButton active={tab === "overview"} onClick={() => setTab("overview")} label="Overview" />
           <TabButton active={tab === "teams"} onClick={() => setTab("teams")} label="Teams" />
           <TabButton active={tab === "performance"} onClick={() => setTab("performance")} label="Performance" />
+          {/* YENİ: İş Atama sekmesi (ayrı sayfaya gider) */}
+          <button
+            onClick={() => router.push("/manager/assign")}
+            className="px-4 py-2 rounded-lg transition bg-[#E60000] text-white shadow hover:opacity-95"
+          >
+            İş Atama
+          </button>
           <TabButton active={tab === "risk"} onClick={() => setTab("risk")} label="Risk Management" />
           <TabButton active={tab === "analytics"} onClick={() => setTab("analytics")} label="Analytics" />
         </div>
@@ -69,7 +78,6 @@ export default function ManagerDashboard() {
         {tab === "overview" && <OverviewSection />}
         {tab === "teams" && <TeamsSection />}
         {tab === "performance" && <PerformanceSection />}
-       
         {tab === "risk" && <RiskSection />}
         {tab === "analytics" && <AnalyticsSection />}
       </main>
@@ -120,7 +128,6 @@ function OverviewSection() {
           blocked={4}
           color="rose"
         />
-        
         <TeamCard
           name="Reporting and Development"
           members={3}
@@ -151,17 +158,16 @@ function TeamsSection() {
   const cards: Array<{
     name: string;
     members: number;
-    avg: string;    
-    avgTone: "good" | "ok"; 
+    avg: string;
+    avgTone: "good" | "ok";
     completed: number;
     inProgress: number;
     blocked: number;
-     
   }> = [
     { name: "UAM (User Access Management)", members: 3, avg: "87% avg",  avgTone: "ok",  completed: 32, inProgress: 8, blocked: 5 },
     { name: "Audit and Compliance",         members: 3, avg: "91% avg",  avgTone: "good",completed: 28, inProgress: 6, blocked: 4  },
     { name: "Change Management",            members: 3, avg: "85% avg",  avgTone: "ok",  completed: 41, inProgress: 7, blocked: 4 },
-    { name: "Reporting and Development",      members: 3, avg: "88% avg",  avgTone: "ok",  completed: 26, inProgress: 5, blocked: 3 },
+    { name: "Reporting and Development",    members: 3, avg: "88% avg",  avgTone: "ok",  completed: 26, inProgress: 5, blocked: 3 },
   ];
 
   const filtered = selected === "all"
@@ -230,7 +236,6 @@ function TeamStatCard(props: {
   completed: number;
   inProgress: number;
   blocked: number;
-  
 }) {
   const badgeColor =
     props.avgTone === "good"
@@ -253,7 +258,6 @@ function TeamStatCard(props: {
         <MiniKPI label="Completed"  value={String(props.completed)} color="green" />
         <MiniKPI label="In Progress" value={String(props.inProgress)} color="blue" />
         <MiniKPI label="Blocked"    value={String(props.blocked)} color="red" />
-                
       </div>
     </article>
   );
@@ -262,24 +266,20 @@ function TeamStatCard(props: {
 /** ================= Performance (görseldeki gibi) ================ */
 
 function PerformanceSection() {
-  // Sol listede görünecek bireysel skorlar
   const people = [
-    
-    { id: "KA", name: "Kübra Aydın", team: "Reporting",      score: 96, avatar: "" },
-    { id: "UT", name: "Ulaş Taşçıoğlu", team: "Reporting",     score: 88, avatar: "" },
+    { id: "KA", name: "Kübra Aydın", team: "Reporting",  score: 96, avatar: "" },
+    { id: "UT", name: "Ulaş Taşçıoğlu", team: "Reporting", score: 88, avatar: "" },
   ];
 
-  // Sağdaki pasta grafiği için dağılım
   const distribution = [
-    { label: "90–100%", value: 4, color: "#10B981" }, // emerald
-    { label: "80–89%",  value: 6, color: "#3B82F6" }, // blue
-    { label: "70–79%",  value: 2, color: "#F59E0B" }, // amber
-    { label: "Below 70%", value: 0, color: "#EF4444" } // red
+    { label: "90–100%", value: 4, color: "#10B981" },
+    { label: "80–89%",  value: 6, color: "#3B82F6" },
+    { label: "70–79%",  value: 2, color: "#F59E0B" },
+    { label: "Below 70%", value: 0, color: "#EF4444" }
   ];
 
   return (
     <section className="grid gap-5 md:grid-cols-2">
-      {/* Sol: Bireysel skor listesi */}
       <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
         <div className="font-semibold">Individual Performance Scores</div>
         <div className="text-xs text-gray-500">Current performance ratings by team member</div>
@@ -298,14 +298,12 @@ function PerformanceSection() {
         </div>
       </div>
 
-      {/* Sağ: Dağılım (Pasta) */}
       <div className="rounded-2xl bg-white p-4 shadow-sm border border-gray-100">
         <div className="font-semibold">Performance Distribution</div>
         <div className="text-xs text-gray-500">Team performance score ranges</div>
 
         <div className="mt-3 grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
           <PieChart data={distribution} />
-
           <div className="space-y-2 text-sm">
             {distribution.map((d) => (
               <div key={d.label} className="flex items-center gap-2">
@@ -321,8 +319,6 @@ function PerformanceSection() {
     </section>
   );
 }
-
-
 
 /** Risk (placeholder) */
 function RiskSection() {
@@ -545,15 +541,12 @@ function Bar({ value }: { value: number }) {
 /** Basit pasta grafik (SVG) – dış kütüphane yok */
 function PieChart({ data }: { data: { label: string; value: number; color: string }[] }) {
   const total = data.reduce((s, d) => s + d.value, 0) || 1;
-
-  // SVG ayarları
   const size = 220;
   const r = size / 2 - 8;
   const cx = size / 2;
   const cy = size / 2;
   const circumference = 2 * Math.PI * r;
 
-  // segmentler
   let offset = 0;
   const segments = data.map((d, idx) => {
     const pct = d.value / total;
@@ -578,7 +571,6 @@ function PieChart({ data }: { data: { label: string; value: number; color: strin
   return (
     <div className="flex items-center justify-center">
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {/* Gri taban halkası */}
         <circle r={r} cx={cx} cy={cy} fill="transparent" stroke="#e5e7eb" strokeWidth={18} />
         {segments}
       </svg>
